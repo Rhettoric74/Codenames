@@ -2,6 +2,7 @@ import random
 import os
 import sys
 import copy
+from word2vec_model import word2vec_model
 sys.path.append(os.pardir)
 class GameBoard:
     def __init__(self, words_file = "words\words_eng_400.txt", rows = 5, columns = 5, card_distribution = (9, 8, 7, 1)) -> None:
@@ -14,6 +15,7 @@ class GameBoard:
             for line in f:
                 words.append(line.strip())
         selected_words = random.sample(words, rows * columns)
+        self.words_list = selected_words
         self.grid = []
         for i in range(rows):
             self.grid.append(selected_words[i*columns : (i + 1) * columns])
@@ -33,6 +35,22 @@ class GameBoard:
         self.assasin_indices = set(random.sample(list(grid_indicies), card_distribution[3]))
         self.starting_teams_turn = True
         self.winner = None
+    def similarities_to_clue(self, clue):
+        unguessed_words = []
+        unguessed_indices = []
+        guessed_list = self.teams + ["Bystander", "Assasin"]
+        for row in range(self.rows):
+            for column in range(self.columns):
+                word = self.grid[row][column]
+                if word not in guessed_list and word.lower() in word2vec_model:
+                    unguessed_words.append(word.lower())
+                    unguessed_indices.append((row, column))
+                elif word not in guessed_list and word.lower() not in word2vec_model:
+                    unguessed_words.append(word[0].upper() + word[1:].lower())
+                    unguessed_indices.append((row, column))
+                elif word not in guessed_list:
+                    print(word)
+        return ([word2vec_model.similarity(clue, word) for word in unguessed_words], unguessed_indices)
     def __repr__(self):
         board = ""
         if self.winner != None:
@@ -74,6 +92,27 @@ class GameBoard:
         if self.starting_teams_turn:
             return self.teams[0]
         return self.teams[1]
+    def get_team_words(self, team):
+        if team == self.teams[0]:
+            return [self.grid[i][j] for (i, j) in self.starting_team_indices if self.grid[i][j] != self.teams[0]]
+        elif team == self.teams[1]:
+            return [self.grid[i][j] for (i, j) in self.second_team_indices if self.grid[i][j] != self.teams[1]]
+        elif team == "Bystander":
+            return [self.grid[i][j] for (i, j) in self.bystander_indices if self.grid[i][j] != "Bystander"]
+        elif team == "Assassin":
+            return [self.grid[i][j] for (i, j) in self.assasin_indices if self.grid[i][j] != "Assassin"]
+    def check_for_winner(self):
+        """Purpose: check if a team has already won. This function should be called whenever 
+        tiles are revealed on the board, to ensure the winner is updated properly."""
+        if len(self.get_team_words("Assassin")) > 0:
+            if len(self.get_team_words(self.teams[0])) == 0:
+                self.winner = self.teams[0]
+            elif len(self.get_team_words(self.teams[1])) == 0:
+                self.winner = self.teams[1]
+    def is_valid_clue(self, clue_word):
+        if clue_word in self.words_list:
+            return False
+        return True
     def reveal(self, indices, team):
         selected_tile_type = None
         if indices in self.starting_team_indices:
@@ -97,6 +136,7 @@ class GameBoard:
             self.winner = remaining_team[0]
         if selected_tile_type != team:
             self.starting_teams_turn = not self.starting_teams_turn
+        self.check_for_winner()
 
 
         

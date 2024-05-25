@@ -1,6 +1,11 @@
 from word2vec_model import word2vec_model
 from game_board import GameBoard
-
+class PotentialGuess:
+        def __init__(self, index, similarity):
+            self.index = index
+            self.similarity = similarity
+        def __lt__(self, other):
+            return self.similarity < other.similarity
 class Guesser:
     def word2vec_guess(this, clue, board):
         """
@@ -12,31 +17,22 @@ class Guesser:
         clue_word = clue[0]
         starting_team = board.get_current_team()
         target_number = clue[1]
-        guessed_list = board.teams + ["Bystander", "Assasin"]
         guesses = 0
+        guesses_list = []
+        word_similarities, unguessed_indices = board.similarities_to_clue(clue_word)
+        sorted_guess_indices = sorted([PotentialGuess(unguessed_indices[i], word_similarities[i]) for i in range(len(unguessed_indices))])
         while board.get_current_team() == starting_team and guesses < target_number:
             guesses += 1
-            unguessed_words = []
-            unguessed_indices = []
-            for row in range(board.rows):
-                for column in range(board.columns):
-                    word = board.grid[row][column]
-                    if word not in guessed_list and word.lower() in word2vec_model:
-                        unguessed_words.append(word.lower())
-                        unguessed_indices.append((row, column))
-                    elif word not in guessed_list and word.lower() not in word2vec_model:
-                        unguessed_words.append(word[0].upper() + word[1:].lower())
-                        unguessed_indices.append((row, column))
-                    elif word not in guessed_list:
-                        print(word)
-            word_distances = [word2vec_model.similarity(clue_word, word) for word in unguessed_words]
-            min_distance = max(word_distances)
-            closest_word_index = unguessed_indices[word_distances.index(min_distance)]
+            best_guess = sorted_guess_indices.pop(-1)
+            closest_word_index = best_guess.index
+            print(best_guess.similarity)
+            guesses_list.append(board.grid[closest_word_index[0]][closest_word_index[1]])
             board.reveal(closest_word_index, starting_team)
             print(board.codemaster_view())
         if board.get_current_team() == starting_team:
             # switch turns if there weren't any errors that already caused turns to swap.
             board.starting_teams_turn = not board.starting_teams_turn
+        print(guesses_list)
 if __name__ == "__main__":
     board = GameBoard()
     guesser = Guesser()
