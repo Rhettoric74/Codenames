@@ -11,9 +11,11 @@ class CluegivingStrategy:
 class ClosestMean(CluegivingStrategy):
     def make_clue(board, team):
         own_words = board.get_team_words(team)
+        print(own_words)
+        print(team)
         best_clue = None
         best_score = -float("inf")
-        for i in range(min(5, len(own_words)), 0, -1):
+        for i in range(min(2, len(own_words)), 0, -1):
             for combination in itertools.combinations(own_words, i):
                 # get the word most similar to the average of the grouped words
                 cur_clues_list = word2vec_model.most_similar(positive=list(combination), topn=5)
@@ -28,16 +30,17 @@ class ClosestMean(CluegivingStrategy):
                 # pick the i most similar words, where i is the number of words supposedly connected by the clue.
                 top_guesses = sorted_guesses[:i]
                 predicted_score = 0
-                for guess in top_guesses:
+                for j, guess in enumerate(top_guesses):
                     # check if the potential guess is on the codemaster's team
-                    if (team == board.teams[0] and guess.index in board.starting_team_indices) or (team == board.teams[1] and guess.index in board.second_team_indices):
-                        predicted_score += 1
+                    if (board.grid[guess.index[0]][guess.index[1]] in own_words):
+                        predicted_score += 2*2**(i - j - 1)
                     elif guess.index in board.bystander_indices:
-                        predicted_score += 0
-                    elif guess.index in board.bystander_indices:
-                        predicted_score -= 10
+                        predicted_score -= 1*2**(i - j - 1)
+                    elif guess.index in board.assasin_indices:
+                        predicted_score -= 5*2**(i - j - 1)
                     else:
-                        predicted_score -= 1
+                        predicted_score -= 2*2**(i - j - 1)
+                print(predicted_score)
                 if predicted_score >= best_score:
                     best_clue = (cur_clue_word, i)
                     best_score = predicted_score

@@ -20,10 +20,10 @@ class Guesser:
         guesses = 0
         guesses_list = []
         word_similarities, unguessed_indices = board.similarities_to_clue(clue_word)
-        sorted_guess_indices = sorted([PotentialGuess(unguessed_indices[i], word_similarities[i]) for i in range(len(unguessed_indices))])
+        sorted_guess_indices = sorted([PotentialGuess(unguessed_indices[i], word_similarities[i]) for i in range(len(unguessed_indices))], reverse=True)
         while board.get_current_team() == starting_team and guesses < target_number:
             guesses += 1
-            best_guess = sorted_guess_indices.pop(-1)
+            best_guess = sorted_guess_indices.pop(0)
             closest_word_index = best_guess.index
             print(best_guess.similarity)
             guesses_list.append(board.grid[closest_word_index[0]][closest_word_index[1]])
